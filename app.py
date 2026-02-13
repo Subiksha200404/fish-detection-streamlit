@@ -50,7 +50,7 @@ h2, h3 {
 """, unsafe_allow_html=True)
 
 # -------------------------
-# Load Model
+# Load Model (Cached)
 # -------------------------
 @st.cache_resource
 def load_model():
@@ -129,9 +129,13 @@ elif page == "🎥 Video Detection":
 
     if uploaded_video:
 
-        temp_video = tempfile.NamedTemporaryFile(delete=False)
-        temp_video.write(uploaded_video.read())
-        video_path = temp_video.name
+        # Create temporary folder
+        temp_dir = tempfile.mkdtemp()
+        video_path = os.path.join(temp_dir, uploaded_video.name)
+
+        # Save video with original extension
+        with open(video_path, "wb") as f:
+            f.write(uploaded_video.read())
 
         st.info("Video uploaded successfully.")
 
