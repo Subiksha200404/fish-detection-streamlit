@@ -3,5 +3,7 @@ ultralytics==8.2.0
 opencv-python-headless==4.9.0.80
 torch==2.1.0
 torchvision==0.16.0
-numpy
-pandas
+numpy==1.26.4
+pandas==2.2.2
+gdown==5.2.0
+rich==13.9.4
