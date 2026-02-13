@@ -3,6 +3,17 @@ from ultralytics import YOLO
 import tempfile
 import os
 from PIL import Image
+import gdown
+
+# -------------------------
+# Download Model (Google Drive)
+# -------------------------
+MODEL_PATH = "best.pt"
+
+if not os.path.exists(MODEL_PATH):
+    with st.spinner("Downloading model... Please wait ⏳"):
+        url = "https://drive.google.com/uc?id=1jC8l4yqmqXCwSEfPDgrsTe2lrXn7gHMS"
+        gdown.download(url, MODEL_PATH, quiet=False)
 
 # -------------------------
 # Page Configuration
@@ -41,7 +52,11 @@ h2, h3 {
 # -------------------------
 # Load Model
 # -------------------------
-model = YOLO("best.pt")
+@st.cache_resource
+def load_model():
+    return YOLO(MODEL_PATH)
+
+model = load_model()
 
 # -------------------------
 # Sidebar Navigation
@@ -59,7 +74,7 @@ if page == "🏠 Home":
     st.markdown("""
     ### 🔍 Project Overview
 
-    This web application demonstrates deployment of a trained **YOLOv9 model**
+    This web application demonstrates deployment of a trained YOLO model
     for detecting underwater fish and coral species.
 
     ---
@@ -114,14 +129,9 @@ elif page == "🎥 Video Detection":
 
     if uploaded_video:
 
-        upload_folder = "uploaded_videos"
-        os.makedirs(upload_folder, exist_ok=True)
-
-        video_path = os.path.join(upload_folder, uploaded_video.name)
-
-        # Save uploaded video
-        with open(video_path, "wb") as f:
-            f.write(uploaded_video.getbuffer())
+        temp_video = tempfile.NamedTemporaryFile(delete=False)
+        temp_video.write(uploaded_video.read())
+        video_path = temp_video.name
 
         st.info("Video uploaded successfully.")
 
