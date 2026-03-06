@@ -1,56 +1,54 @@
+
 import streamlit as st
 from ultralytics import YOLO
 import tempfile
 import os
 from PIL import Image
+import cv2
+import pandas as pd
 import gdown
 
 # -------------------------
-# Download Model (Google Drive)
+# Download Model
 # -------------------------
 MODEL_PATH = "best.pt"
 
 if not os.path.exists(MODEL_PATH):
-    with st.spinner("Downloading model... Please wait ⏳"):
+    with st.spinner("Downloading model..."):
         url = "https://drive.google.com/uc?id=1jC8l4yqmqXCwSEfPDgrsTe2lrXn7gHMS"
         gdown.download(url, MODEL_PATH, quiet=False)
 
 # -------------------------
-# Page Configuration
+# Page Config
 # -------------------------
 st.set_page_config(
-    page_title="Underwater Fish and Coral Detection Dashboard",
+    page_title="Underwater Fish and Coral Detection",
     page_icon="🌊",
     layout="wide"
 )
 
 # -------------------------
-# Custom Styling
+# Styling
 # -------------------------
 st.markdown("""
 <style>
 .main {
-    background-color: #0E1117;
+background-color: #0E1117;
 }
-h1 {
-    color: #00BFFF;
-    text-align: center;
-}
-h2, h3 {
-    color: #1E90FF;
-}
+h1 {color:#00BFFF;text-align:center;}
+h2,h3 {color:#1E90FF;}
 .stButton>button {
-    background-color: #1E90FF;
-    color: white;
-    border-radius: 8px;
-    height: 3em;
-    width: 100%;
+background-color:#1E90FF;
+color:white;
+border-radius:8px;
+height:3em;
+width:100%;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------
-# Load Model (Cached)
+# Load Model
 # -------------------------
 @st.cache_resource
 def load_model():
@@ -59,90 +57,158 @@ def load_model():
 model = load_model()
 
 # -------------------------
-# Sidebar Navigation
+# Sidebar
 # -------------------------
 page = st.sidebar.radio(
     "Navigation",
-    ["🏠 Home", "📷 Image Detection", "🎥 Video Detection"]
+    ["🏠 Home","📷 Image Detection","🎥 Video Detection"]
 )
 
 # =====================================================
-# HOME PAGE
+# HOME
 # =====================================================
 if page == "🏠 Home":
+
     st.title("Underwater Fish and Coral Detection")
+
     st.markdown("""
-    ### 🔍 Project Overview
+### 🔍 Project Overview
 
-    This web application demonstrates deployment of a trained YOLO model
-    for detecting underwater fish and coral species.
+This web application demonstrates deployment of a trained **YOLO model**
+for detecting underwater fish and coral species.
 
-    ---
-    ### 🚀 Features
-    - Upload single or multiple images
-    - Upload video files
-    - Automatic object detection
-    - Bounding box visualization
-    - Confidence score display
+---
 
-    ---
-    Developed as part of Final Year Project.
-    """)
+### 🚀 Features
+
+- Upload images
+- Upload videos
+- Automatic object detection
+- Bounding boxes
+- Confidence scores
+- Download processed results
+
+---
+
+Developed as part of **Final Year Project**.
+""")
 
 # =====================================================
 # IMAGE DETECTION
 # =====================================================
 elif page == "📷 Image Detection":
+
     st.title("Image Detection")
 
     uploaded_files = st.file_uploader(
         "Upload Image(s)",
-        type=["jpg", "png", "jpeg"],
+        type=["jpg","png","jpeg"],
         accept_multiple_files=True
     )
 
     if uploaded_files:
+
         for uploaded_file in uploaded_files:
-            st.subheader(f"Processing: {uploaded_file.name}")
+
+            st.subheader(uploaded_file.name)
 
             image = Image.open(uploaded_file)
-            st.image(image, caption="Original Image", use_column_width=True)
+
+            st.image(image, caption="Original Image", width=500)
 
             with st.spinner("Running detection..."):
-                results = model(image, imgsz=640)
+
+                results = model(image)
 
             result_img = results[0].plot()
 
-            st.image(result_img, caption="Detection Result", use_column_width=True)
-            st.success("Detection Complete ✅")
+            result_img = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
+
+            st.image(result_img, caption="Detection Result", width=500)
+
+            boxes = results[0].boxes
+            names = results[0].names
+
+            if boxes is not None:
+
+                classes = boxes.cls.tolist()
+
+                detected = [names[int(i)] for i in classes]
+
+                if len(detected) > 0:
+
+                    df = pd.DataFrame(detected, columns=["Object"])
+
+                    summary = df["Object"].value_counts()
+
+                    st.subheader("Detection Summary")
+
+                    st.bar_chart(summary)
 
 # =====================================================
 # VIDEO DETECTION
 # =====================================================
 elif page == "🎥 Video Detection":
+
     st.title("Video Detection")
 
     uploaded_video = st.file_uploader(
         "Upload Video",
-        type=["mp4", "avi", "mov"]
+        type=["mp4","avi","mov"]
     )
 
     if uploaded_video:
 
-        # Create temporary folder
+        st.video(uploaded_video)
+
+        # Save uploaded video temporarily
         temp_dir = tempfile.mkdtemp()
         video_path = os.path.join(temp_dir, uploaded_video.name)
 
-        # Save video with original extension
         with open(video_path, "wb") as f:
             f.write(uploaded_video.read())
 
-        st.info("Video uploaded successfully.")
+        st.success("Video uploaded successfully")
 
         if st.button("Run Detection"):
 
-            with st.spinner("Processing video... This may take some time ⏳"):
-                model(video_path, save=True)
+            with st.spinner("Processing video..."):
 
-            st.success("Video processed successfully! ✅")
-            st.write("Processed video saved inside 'runs/detect/' folder.")
+                results = model.predict(
+                    source=video_path,
+                    save=True,
+                    project=temp_dir,
+                    name="result",
+                    exist_ok=True
+                )
+
+            st.success("Processing complete")
+
+            result_folder = os.path.join(temp_dir, "result")
+
+            output_video_path = None
+
+            for file in os.listdir(result_folder):
+                if file.endswith((".mp4",".avi",".mov",".mkv")):
+                    output_video_path = os.path.join(result_folder, file)
+                    break
+
+            if output_video_path and os.path.exists(output_video_path):
+
+                st.subheader("Processed Video")
+
+                st.video(output_video_path)
+
+                with open(output_video_path, "rb") as file:
+                    video_bytes = file.read()
+
+                st.download_button(
+                    label="Download Processed Video",
+                    data=video_bytes,
+                    file_name="processed_video.mp4",
+                    mime="video/mp4"
+                )
+
+            else:
+
+                st.error("Output video not found.")
