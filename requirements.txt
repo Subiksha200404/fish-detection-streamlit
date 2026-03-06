@@ -1,8 +1,8 @@
 streamlit
 ultralytics
 opencv-python-headless
-torch>=2.5.0
-torchvision
-numpy
+pillow
 pandas
 gdown
+torch
+torchvision
