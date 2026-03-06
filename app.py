@@ -1,4 +1,3 @@
-
 import streamlit as st
 from ultralytics import YOLO
 import tempfile
@@ -9,6 +8,15 @@ import pandas as pd
 import gdown
 
 # -------------------------
+# Page Config (MUST BE FIRST)
+# -------------------------
+st.set_page_config(
+    page_title="Underwater Fish and Coral Detection",
+    page_icon="🌊",
+    layout="wide"
+)
+
+# -------------------------
 # Download Model
 # -------------------------
 MODEL_PATH = "best.pt"
@@ -17,15 +25,6 @@ if not os.path.exists(MODEL_PATH):
     with st.spinner("Downloading model..."):
         url = "https://drive.google.com/uc?id=1jC8l4yqmqXCwSEfPDgrsTe2lrXn7gHMS"
         gdown.download(url, MODEL_PATH, quiet=False)
-
-# -------------------------
-# Page Config
-# -------------------------
-st.set_page_config(
-    page_title="Underwater Fish and Coral Detection",
-    page_icon="🌊",
-    layout="wide"
-)
 
 # -------------------------
 # Styling
@@ -161,7 +160,7 @@ elif page == "🎥 Video Detection":
 
         st.video(uploaded_video)
 
-        # Save uploaded video temporarily
+        # Save uploaded video
         temp_dir = tempfile.mkdtemp()
         video_path = os.path.join(temp_dir, uploaded_video.name)
 
@@ -184,13 +183,14 @@ elif page == "🎥 Video Detection":
 
             st.success("Processing complete")
 
-            result_folder = os.path.join(temp_dir, "result")
+            # Find output video automatically
+            output_folder = os.path.join(temp_dir, "result")
 
             output_video_path = None
 
-            for file in os.listdir(result_folder):
-                if file.endswith((".mp4",".avi",".mov",".mkv")):
-                    output_video_path = os.path.join(result_folder, file)
+            for file in os.listdir(output_folder):
+                if file.endswith((".mp4",".avi",".mov")):
+                    output_video_path = os.path.join(output_folder, file)
                     break
 
             if output_video_path and os.path.exists(output_video_path):
